@@ -314,6 +314,51 @@ id removeNull(id rootObject);
 
 #pragma mark Tweets
 
+- (void)getStatusesRetweetsForID:(NSString *)statusID
+                   optionalCount:(NSString *)count
+                        trimUser:(BOOL)trimUser
+                    successBlock:(void(^)(NSArray *statuses))successBlock
+                      errorBlock:(void(^)(NSError *error))errorBlock {
+
+    NSParameterAssert(statusID);
+    
+    NSString *resource = [NSString stringWithFormat:@"statuses/retweets/%@.json", statusID];
+    
+    NSMutableDictionary *md = [NSMutableDictionary dictionary];
+    
+    if(count) md[@"count"] = count;
+    if(trimUser) md[@"trim_user"] = @"true";
+    
+    [_oauth getResource:resource parameters:md successBlock:^(id response) {
+        successBlock(response);
+    } errorBlock:^(NSError *error) {
+        errorBlock(error);
+    }];
+}
+
+- (void)getStatusesShowID:(NSString *)statusID
+                 trimUser:(BOOL)trimUser
+         includeMyRetweet:(BOOL)includeMyRetweet
+          includeEntities:(BOOL)includeEntities
+                    successBlock:(void(^)(NSDictionary *status))successBlock
+                      errorBlock:(void(^)(NSError *error))errorBlock {
+    
+    NSParameterAssert(statusID);
+        
+    NSMutableDictionary *md = [NSMutableDictionary dictionary];
+    
+    md[@"id"] = statusID;
+    if(trimUser) md[@"trim_user"] = @"true";
+    if(includeMyRetweet) md[@"include_my_retweet"] = @"true";
+    if(includeEntities) md[@"include_entities"] = @"true";
+    
+    [_oauth getResource:@"statuses/show.json" parameters:md successBlock:^(id response) {
+        successBlock(response);
+    } errorBlock:^(NSError *error) {
+        errorBlock(error);
+    }];
+}
+
 - (void)postDestroyStatusWithID:(NSString *)statusID
                    successBlock:(void(^)(NSDictionary *status))successBlock
                      errorBlock:(void(^)(NSError *error))errorBlock {
@@ -410,6 +455,39 @@ id removeNull(id rootObject);
     } errorBlock:^(NSError *error) {
         errorBlock(error);
     }];
+}
+
+- (void)getStatusesRetweetersIDsForStatusID:(NSString *)statusID
+                             optionalCursor:(NSString *)cursor
+                         returnIDsAsStrings:(BOOL)returnIDsAsStrings
+                               successBlock:(void(^)(NSArray *ids, NSString *previousCursor, NSString *nextCursor))successBlock
+                                 errorBlock:(void(^)(NSError *error))errorBlock {
+    
+    NSParameterAssert(statusID);
+    
+    NSMutableDictionary *md = [NSMutableDictionary dictionary];
+    
+    md[@"id"] = statusID;
+    if(cursor) md[@"cursor"] = cursor;
+    if(returnIDsAsStrings) md[@"stringify_ids"] = @"true";
+    
+    [_oauth getResource:@"statuses/retweeters/ids.json" parameters:md successBlock:^(id response) {
+        
+        NSString *previousCursor = nil;
+        NSString *nextCursor = nil;
+        NSArray *ids = nil;
+        
+        if([response isKindOfClass:[NSDictionary class]]) {
+            previousCursor = response[@"previous_cursor_str"];
+            nextCursor = response[@"next_cursor_str"];
+            ids = response[@"ids"];
+        }
+        
+        successBlock(ids, previousCursor, nextCursor);
+    } errorBlock:^(NSError *error) {
+        errorBlock(error);
+    }];
+    
 }
 
 #pragma mark Search
